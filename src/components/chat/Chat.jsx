@@ -1,118 +1,148 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import { useAuth } from '../../contexts/AuthContext';
-import { useParams } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from "react";
+import { useAuth } from "../../contexts/AuthContext";
+import { useParams } from "react-router";
+import io from "socket.io-client";
 
-import io from 'socket.io-client';
-import Conversation from './Conversation';
-import Message from './Message';
-
+import axios from "axios";
+import { addNewMessageURL, createChatURL, getMessageURL } from "../../api";
+import TextMessage from "./TextMessage";
+import ScrollToBottom from "react-scroll-to-bottom";
 
 const Chat = () => {
-  const [messages, setMessages] = useState([]);
-  const [chatId, setChatId] = useState(null); 
-  const [newMessage, setNewMessage] = useState('');
-
   const { user } = useAuth();
   const { userId } = useParams();
+  const scrollRef = useRef();
 
-  // const socket = io('http://localhost:8000');
-  // const fetchData = async () => {
-  //   try {
-  //     if (!user) {
-  //       console.error('User is null. Cannot fetch data.');
-  //       return;
-  //     }
-  //     const response = await axios.get(`http://localhost:8000/api/v1/chat${user._id}`)
-  //     const response = await axios.get(`http://localhost:8000/api/v1/chat/find/${user._id}/${userId}`);
+  const [chatId, setChatId] = useState(null);
+  const [messages, setMessages] = useState(null);
+  const [newMessage, setNewMessage] = useState([]);
+  const [arrivalMessage, setArrivalMessage] = useState(null);
 
-  //     const fetchedChatId = response.data?._id;
+  const socket = useRef();
 
-  //     if (fetchedChatId !== undefined) {
-  //       setChatId(fetchedChatId);
-  //       const messageResponse = await axios.get(`http://localhost:8000/api/v1/message/${fetchedChatId}`);
-  //       setMessages(messageResponse.data);
-  //     }
-  //   } catch (error) {
-  //     console.error('Error fetching previous chat:', error);
-  //   }
-  // };
+  useEffect(() => {
+    socket.current = io("ws://localhost:8900");
+    socket.current.on("getMessage", (data) => {
+      setArrivalMessage({
+        sender: data.senderId,
+        text: data.text,
+        createdAt: Date.now(),
+      });
+    });
+  }, []);
 
-  // useEffect(() => {
-  //   fetchData();
-  //  socket.on('message', (newMessage) => {
-  //     setMessages((prevMessages) => [...prevMessages, newMessage]);
-  //   });
+  useEffect(() => {
+    arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);
+  }, [arrivalMessage]);
 
-  //   return () => {
-  //     socket.off('message');
-  //   };
-  // }, [userId, user, socket]);
-
-  // const sendMessage = async () => {
-  //   try {
-  //     if (!chatId || !newMessage) {
-  //       console.error('Chat ID or message content is missing.');
-  //       return;
-  //     }
-  
-  //     const response = await axios.post('http://localhost:8000/api/v1/message', {
-  //       chatId: chatId,
-  //       senderId: userId,
-  //       text: newMessage,
-  //     });
-  
-  //     const addedMessage = response.data;
-  
-  //     setMessages((prevMessages) => [...prevMessages, addedMessage]);
-  //     setNewMessage('');
-  //   } catch (error) {
-  //     console.error('Error sending message:', error);
-  //   }
-  // };
-  
-
-
-  const getData = async () => {
-    try{
-      if (!user) {
-              console.error('User is null. Cannot fetch data.');
-              return;
-      }
-        const res = await axios.get(`http://localhost:8000/api/v1/chat/${user._id}`)
-        setMessages(res.data)
-    }catch(error){
-      console.log(error)
+  useEffect(() => {
+    if (user) {
+      socket.current.emit("addUser", user._id);
+      // socket.current.on("getUsers",users=>{
+      // setOnlineUsers(users)
+      // })
     }
-  }
+  }, [user]);
 
-  useEffect(()=>{
-    getData()
-  },[user])
+  const createChat = async (senderId, receiverId) => {
+    try {
+      const res = await axios.post(createChatURL, { senderId, receiverId });
+      setChatId(res.data._id);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
+  useEffect(() => {
+    if (user && userId && user._id) {
+      createChat(user._id, userId);
+    }
+  }, [user, userId]);
+
+  const getMessages = async (chatId) => {
+    try {
+      const res = await axios.get(`${getMessageURL}/${chatId}`);
+
+      setMessages(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    if (chatId) {
+      getMessages(chatId);
+    }
+  }, [chatId]);
+
+  const handleNewMessage = async (e) => {
+    e.preventDefault();
+    const message = {
+      chatId: chatId,
+      senderId: user._id,
+      text: newMessage,
+    };
+
+    socket.current.emit("sendMessage", {
+      senderId: user._id,
+      receiverId: userId,
+      text: newMessage,
+    });
+
+    try {
+      const res = await axios.post(`${addNewMessageURL}`, message);
+
+      setMessages([...messages, res.data]);
+      setNewMessage("");
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  console.log(messages);
   return !messages ? (
     <h1>Loading data</h1>
   ) : (
-    <div>
-      {messages.map((chat,index)=>{
-        return (
-          <Message chat={chat} currentUser={user} />
-        )
-       })} 
-
-      {/* {messages.map((data, index) => (
-        <div key={index}>
-          <ul>
-            <li>{data.text}</li>
-          </ul>
+    <div className="flex justify-center items-center w-full h-screen bg-gray-50">
+      <div className="flex w-4/6 ">
+        <div className="w-full bg-gray-200 p-4 rounded-md">
+          <ScrollToBottom className="h-[70vh] overflow-y-auto">
+            {messages.length === 0 ? (
+              <div className="text-center text-gray-500 ">
+                It looks like your conversation is empty. Why not start a new
+                one? 😊
+              </div>
+            ) : (
+              messages.map((message, index) => (
+                <div key={index} className="mb-4">
+                  <TextMessage
+                    message={message}
+                    own={message.senderId === user._id}
+                  />
+                </div>
+              ))
+            )}
+          </ScrollToBottom>
+          {/* send new Message */}
+          <div className="flex justify-center items-center mt-4">
+            <div className="flex-1">
+              <input
+                placeholder="Type your message here..."
+                className="border p-2 w-full rounded-l-md"
+                type="text"
+                onChange={(e) => setNewMessage(e.target.value)}
+                value={newMessage}
+              />
+            </div>
+            <button
+              className="bg-green-500 text-white p-2 rounded-r-md"
+              onClick={handleNewMessage}
+            >
+              Send
+            </button>
+          </div>
         </div>
-      ))}
-      <input
-        type="text"
-        value={newMessage}
-        onChange={(e) => setNewMessage(e.target.value)}
-      />
-      <button onClick={sendMessage}>Send Message</button> */}
+      </div>
     </div>
   );
 };

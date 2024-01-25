@@ -16,4 +16,6 @@ export const getUserDetailsURL = `${baseUrl}/get-user-details`
 export const updateUserDetailsURL = `${baseUrl}/update-user-details`
 
 export const getChatDetailsURL = `${baseUrl}/chat/`
-
+export const createChatURL = `${baseUrl}/chat`
+export const getMessageURL = `${baseUrl}/message`
+export const addNewMessageURL = `${baseUrl}/message`

@@ -45,6 +45,7 @@ import { useAuth } from "./contexts/AuthContext";
 import { PrivateRoute } from "./utils/PrivateRoute.js";
 import UserDetails from "./pages/UserDetails.jsx";
 import UpdateUserDetails from "./pages/UpdateUserDetails.jsx";
+import UserChat from "./components/chat/UserChat/UserChat.jsx";
 
 
 const App = () => {
@@ -67,6 +68,7 @@ const App = () => {
       "/login",
       "/forgot-password",
       "/api/v1/auth/reset-password/",
+      "/userchat/"
     ];
     return (
       activeMenu && !excludedPaths.some((path) => currentPath.includes(path))
@@ -292,6 +294,12 @@ const App = () => {
                 <PrivateRoute>
                   <Chat />
                 </PrivateRoute>
+              }
+            />
+            <Route
+              path="/userchat/:userId"
+              element={
+                  <UserChat />
               }
             />
            

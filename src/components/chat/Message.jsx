@@ -1,20 +1,39 @@
 import React, { useEffect, useState } from 'react'
+import axios from "axios"
+import { getUserDetailsURL } from '../../api';
+import {headers} from "../../utils/Header"
 
 const Message = ({chat,currentUser}) => {
-    // console.log("chat",chat.member.find((m) => m !== currentUser._id))
     
-    console.log(currentUser._id)
+    
     const [user,setUser] = useState(null);
+   
+
     useEffect(() => {
-        const friendId = chat.members.find((m) => m !== currentUser._id);
+        const friendId = chat.members.find((m) => m !== currentUser?._id);
         
-        const getUser
-        const res = await axios.get()
-    }, [chat, currentUser]);
+        const getUser = async () =>{
+          const res = await axios.get(`${getUserDetailsURL}/${friendId}`, { headers })
+          .then((result) => {
+            console.log(result?.data?.response[0]?.user)
+            setUser(result?.data?.response[0]?.user);
+          })
+          .catch((error) => {
+            console.log(error);
+          })
+        }
+        getUser()
+    }, [currentUser,chat]);
+
+
+  
+
     
-    console.log("chat",chat.members.find((m)=>m!==currentUser._id))
-  return (
-    <div>Message</div>
+  return !user? <h1>Hello world</h1> :  (
+    <div>
+      <img src={user.avatar} height="24" width="24" alt="avatar"/>
+      {user.username}
+    </div>
   )
 }
 
