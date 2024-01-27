@@ -68,7 +68,7 @@ const App = () => {
       "/login",
       "/forgot-password",
       "/api/v1/auth/reset-password/",
-      "/userchat/"
+      
     ];
     return (
       activeMenu && !excludedPaths.some((path) => currentPath.includes(path))
@@ -294,12 +294,6 @@ const App = () => {
                 <PrivateRoute>
                   <Chat />
                 </PrivateRoute>
-              }
-            />
-            <Route
-              path="/userchat/:userId"
-              element={
-                  <UserChat />
               }
             />
            

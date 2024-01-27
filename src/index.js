@@ -11,9 +11,7 @@ createRoot(document.getElementById("root")).render(
   <BrowserRouter>
     <ContextProvider>
       <AuthProvider>
-        {/* <ChatProvider> */}
           <App />
-        {/* </ChatProvider> */}
       </AuthProvider>
     </ContextProvider>
   </BrowserRouter>

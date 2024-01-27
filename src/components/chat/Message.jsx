@@ -15,7 +15,7 @@ const Message = ({chat,currentUser}) => {
         const getUser = async () =>{
           const res = await axios.get(`${getUserDetailsURL}/${friendId}`, { headers })
           .then((result) => {
-            console.log(result?.data?.response[0]?.user)
+            console.log("chat user",result?.data?.response[0]?.user)
             setUser(result?.data?.response[0]?.user);
           })
           .catch((error) => {
@@ -27,8 +27,6 @@ const Message = ({chat,currentUser}) => {
 
 
   
-
-    
   return !user? <h1>Hello world</h1> :  (
     <div>
       <img src={user.avatar} height="24" width="24" alt="avatar"/>

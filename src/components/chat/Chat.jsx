@@ -14,21 +14,26 @@ const Chat = () => {
   const scrollRef = useRef();
 
   const [chatId, setChatId] = useState(null);
-  const [messages, setMessages] = useState(null);
-  const [newMessage, setNewMessage] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
   const [arrivalMessage, setArrivalMessage] = useState(null);
 
   const socket = useRef();
 
   useEffect(() => {
     socket.current = io("ws://localhost:8900");
+
     socket.current.on("getMessage", (data) => {
       setArrivalMessage({
-        sender: data.senderId,
+        senderId: data.senderId,
         text: data.text,
         createdAt: Date.now(),
       });
     });
+
+    return () => {
+      socket.current.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -38,9 +43,6 @@ const Chat = () => {
   useEffect(() => {
     if (user) {
       socket.current.emit("addUser", user._id);
-      // socket.current.on("getUsers",users=>{
-      // setOnlineUsers(users)
-      // })
     }
   }, [user]);
 
@@ -62,7 +64,6 @@ const Chat = () => {
   const getMessages = async (chatId) => {
     try {
       const res = await axios.get(`${getMessageURL}/${chatId}`);
-
       setMessages(res.data);
     } catch (error) {
       console.log(error);
@@ -75,8 +76,7 @@ const Chat = () => {
     }
   }, [chatId]);
 
-  const handleNewMessage = async (e) => {
-    e.preventDefault();
+  const handleNewMessage = async () => {
     const message = {
       chatId: chatId,
       senderId: user._id,
@@ -90,8 +90,7 @@ const Chat = () => {
     });
 
     try {
-      const res = await axios.post(`${addNewMessageURL}`, message);
-
+      const res = await axios.post(addNewMessageURL, message);
       setMessages([...messages, res.data]);
       setNewMessage("");
     } catch (error) {
@@ -99,18 +98,21 @@ const Chat = () => {
     }
   };
 
-  console.log(messages);
-  return !messages ? (
-    <h1>Loading data</h1>
-  ) : (
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleNewMessage();
+    }
+  };
+
+  return (
     <div className="flex justify-center items-center w-full h-screen bg-gray-50">
       <div className="flex w-4/6 ">
         <div className="w-full bg-gray-200 p-4 rounded-md">
           <ScrollToBottom className="h-[70vh] overflow-y-auto">
             {messages.length === 0 ? (
               <div className="text-center text-gray-500 ">
-                It looks like your conversation is empty. Why not start a new
-                one? 😊
+                It looks like your conversation is empty. Why not start a new one? 😊
               </div>
             ) : (
               messages.map((message, index) => (
@@ -131,6 +133,7 @@ const Chat = () => {
                 className="border p-2 w-full rounded-l-md"
                 type="text"
                 onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={handleKeyPress}
                 value={newMessage}
               />
             </div>

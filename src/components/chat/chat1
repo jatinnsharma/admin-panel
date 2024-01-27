@@ -18,7 +18,7 @@ const Chat = () => {
 
   const [msg, setMsg] = useState([]); 
   const { user } = useAuth(); 
-  const { userId } = useParams();
+  const { userId } = useParams(); 
   const scrollRef = useRef();
  
   const [arrivalMessage, setArrivalMessage] = useState(null);
@@ -62,7 +62,7 @@ const Chat = () => {
       console.log(error)
     }
   }
-
+ 
   useEffect(()=>{
     getData()
   },[user])
