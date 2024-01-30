@@ -5,7 +5,12 @@ import io from "socket.io-client";
 import { CiImageOn } from "react-icons/ci";
 
 import axios from "axios";
-import { addNewMessageURL, createChatURL, getMessageURL, sendImageURL } from "../../api";
+import {
+  addNewMessageURL,
+  createChatURL,
+  getMessageURL,
+  sendImageURL,
+} from "../../api";
 import TextMessage from "./TextMessage";
 import ScrollToBottom from "react-scroll-to-bottom";
 
@@ -22,15 +27,27 @@ const Chat = () => {
   const [arrivalMessage, setArrivalMessage] = useState(null);
 
   const [showOptions, setShowOptions] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+
+
 
   useEffect(() => {
     socket.current = io("ws://localhost:8900");
+
+    socket.current.on("isTyping", ({ senderId }) => {
+      setIsTyping(true);
+     setTimeout(() => {
+        setIsTyping(false);
+      }, 5000);
+
+     
+    });
 
     socket.current.on("getMessage", (data) => {
       setArrivalMessage({
         senderId: data.senderId,
         text: data.text,
-        photo:data.photo,
+        photo: data.photo,
         createdAt: Date.now(),
       });
     });
@@ -49,6 +66,9 @@ const Chat = () => {
   useEffect(() => {
     if (user) {
       socket.current.emit("addUser", user._id);
+      socket.current.on("getUsers", (users) => {
+        console.log("users", users);
+      });
     }
   }, [user]);
 
@@ -162,10 +182,20 @@ const Chat = () => {
     }
   };
 
+  const handleTyping = () => {
+    if (userId) {
+        socket.current.emit("typing", { senderId: user._id, receiverId: userId });
+    }
+};
+
+
   return (
     <div className="flex justify-center items-center w-full h-screen bg-gray-50">
       <div className="flex w-4/6 ">
         <div className="w-full bg-gray-200 p-4 rounded-md">
+        {isTyping && (
+              <div className="text-gray-500"> typing...</div>
+            )}
           <ScrollToBottom className="h-[70vh] overflow-y-auto">
             {messages.length === 0 ? (
               <div className="text-center text-gray-500 ">
@@ -185,12 +215,16 @@ const Chat = () => {
           </ScrollToBottom>
           {/* send new Message */}
           <div className="flex justify-center items-center mt-4">
+            
             <div className="flex-1">
               <input
                 placeholder="Type your message here..."
                 className="border p-2 w-full rounded-l-md"
                 type="text"
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  handleTyping();
+                }}
                 onKeyDown={handleKeyPress}
                 value={newMessage}
               />
