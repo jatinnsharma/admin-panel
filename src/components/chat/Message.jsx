@@ -27,7 +27,7 @@ const Message = ({chat,currentUser}) => {
 
 
   
-  return !user? <h1>Hello world</h1> :  (
+  return !user? <h1>Loading conversation</h1> :  (
     <div>
       <img src={user.avatar} height="24" width="24" alt="avatar"/>
       {user.username}

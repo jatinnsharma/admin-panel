@@ -19,3 +19,5 @@ export const getChatDetailsURL = `${baseUrl}/chat/`
 export const createChatURL = `${baseUrl}/chat`
 export const getMessageURL = `${baseUrl}/message`
 export const addNewMessageURL = `${baseUrl}/message`
+
+export const sendImageURL = `${baseUrl}/message`
