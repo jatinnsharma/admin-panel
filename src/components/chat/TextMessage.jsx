@@ -1,8 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from "timeago.js";
 
 const TextMessage = ({ message, own }) => {
   const isImage = message?.photo?.cloudinaryUrl;
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded);
+  };
+
+  const renderMessageContent = () => {
+    if (message?.text?.length > 100 && !isExpanded) {
+      return (
+        <>
+          <span>{message.text.slice(0, 150)}</span>
+          <span className="text-blue-500 cursor-pointer" onClick={toggleExpand}>
+            Read More
+          </span>
+        </>
+      );
+    } else {
+      return <span>{message.text}</span>;
+    }
+  };
+
+
+
+
   return (
     <div className={`flex ${own ? 'justify-end' : 'justify-start'} mb-2`}>
       <div
@@ -13,7 +37,7 @@ const TextMessage = ({ message, own }) => {
         {isImage ? (
           <img src={isImage} alt="Sent" className="w-full h-auto rounded-md mb-2" />
         ) : (
-          <p className="text-sm">{message.text}</p>
+          <p className="text-sm">{renderMessageContent()}</p>
         )}
         <p className={`text-xs ${own ? ' text-gray-700':'text-gray-600'}`}>
         {format(message.createdAt)}
