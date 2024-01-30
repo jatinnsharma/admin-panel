@@ -3,6 +3,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useParams } from "react-router";
 import io from "socket.io-client";
 import { CiImageOn ,CiFaceSmile } from "react-icons/ci";
+import { FaImage } from "react-icons/fa";
 
 import axios from "axios";
 import {
@@ -21,6 +22,9 @@ const Chat = () => {
   const scrollRef = useRef();
   const socket = useRef();
   const fileInputRef = useRef(null);
+  const emojiButtonRef = useRef(null);
+  const optionsButtonRef = useRef(null);
+
 
   const [chatId, setChatId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -34,13 +38,13 @@ const Chat = () => {
 
   useEffect(() => {
     socket.current = io("ws://localhost:8900");
-
     socket.current.on("isTyping", ({ senderId }) => {
       setIsTyping(true);
       setTimeout(() => {
         setIsTyping(false);
       }, 3000);
     });
+
 
     socket.current.on("getMessage", (data) => {
       setArrivalMessage({
@@ -51,11 +55,32 @@ const Chat = () => {
       });
     });
 
+    const handleClickOutside = (event) => {
+      if (
+        emojiButtonRef.current &&
+        !emojiButtonRef.current.contains(event.target) &&
+        showEmojiList
+      ) {
+        setShowEmojiList(false);
+      }
+
+      if (
+        optionsButtonRef.current &&
+        !optionsButtonRef.current.contains(event.target) &&
+        showOptions
+      ) {
+        setShowOptions(false);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
     return () => {
       socket.current.disconnect();
-    };
-  }, []);
+      document.removeEventListener("click", handleClickOutside);
 
+    };
+  }, [showEmojiList, showOptions]);
   useEffect(() => {
     if (arrivalMessage) {
       setMessages((prev) => [...prev, arrivalMessage]);
@@ -230,34 +255,37 @@ const Chat = () => {
               />
             </div>
             <button
+            ref={optionsButtonRef}
               className="text-gray-600 bg-gray-100 shadow-md px-2 rounded-full absolute right-[16rem]"
               onClick={() => setShowOptions(!showOptions)}
             >
               +
             </button>
-            {showOptions && (
-              <div className="absolute right-[25rem] flex top-[29rem] p-2 bg-white border rounded-md w-40 h-20">
-                <div>
-                  <label
-                    htmlFor="photo"
-                    className="cursor-pointer text-gray-700"
-                    onClick={handleImageClick}
-                  >
-                    <CiImageOn size={25} />
-                  </label>
-                  <input type="file" ref={fileInputRef} className="hidden" />
-                </div>
-                <div className="cursor-pointer">
+            <div className="cursor-pointer absolute right-[18rem] " ref={emojiButtonRef}>
                   <CiFaceSmile
                     size={25}
                     onClick={() => setShowEmojiList(!showEmojiList)}
                   />
                 </div>
+            {showOptions && (
+              <div className="absolute right-[17rem] flex top-[33rem] p-2 bg-white border rounded-md w-40 h-20">
+                <div>
+                  <label
+                    htmlFor="photo"
+                    className="cursor-pointer "
+                    onClick={handleImageClick}
+                  >
+                    
+                    <CiImageOn size={25}  />
+                  </label>
+                  <input type="file" ref={fileInputRef} className="hidden" />
+                </div>
+                
               </div>
             )}
 
             {showEmojiList && (
-              <div className="absolute bottom-20 right-[10rem] bg-gray-500 p-2 rounded-md w-30">
+              <div className="absolute bottom-[6.3rem] right-[1rem] bg-gray-500 p-2 rounded-md w-30">
                 <div className="grid grid-cols-10 gap-2">
                   {emojiList.map((emoji, index) => (
                     <span
@@ -272,7 +300,7 @@ const Chat = () => {
               </div>
             )}
             <button
-              className="bg-green-500 text-white p-2 rounded-r-md"
+              className="bg-green-800 text-white p-2 rounded-r-md"
               onClick={handleNewMessage}
             >
               Send
