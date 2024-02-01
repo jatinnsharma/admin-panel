@@ -4,7 +4,6 @@ import { useParams } from "react-router";
 import io from "socket.io-client";
 import { CiImageOn, CiFaceSmile } from "react-icons/ci";
 import { FaImage } from "react-icons/fa";
-import { headers } from "../../utils/Header";
 
 import axios from "axios";
 import {
@@ -36,10 +35,41 @@ const Chat = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiList, setShowEmojiList] = useState(false);
   const [userDetails, setUserDetails] = useState({});
+  const [isOnline, setIsOnline] = useState(false);
 
 
   useEffect(() => {
+    const getUser = async () => {
+      const res = await axios
+        .get(`${getUserDetailsURL}/${userId}`, { headers })
+        .then((result) => {
+          console.log("chat user", result?.data?.response[0]?.user);
+          setUserDetails(result?.data?.response[0]?.user);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    };
+    getUser();
+  }, [userId]);
+
+  useEffect(() => {
     socket.current = io("ws://localhost:8900");
+
+    socket.current.on("userOnline", (userId) => {
+      if (userId === userDetails?._id) {
+          setIsOnline(true);
+      }
+  });
+
+  socket.current.on("userOffline", (userId) => {
+      if (userId === userDetails?._id) {
+          setIsOnline(false);
+      }
+  });
+
+
+
     socket.current.on("isTyping", ({ senderId }) => {
       setIsTyping(true);
       setTimeout(() => {
@@ -77,24 +107,35 @@ const Chat = () => {
     document.addEventListener("click", handleClickOutside);
 
     return () => {
-      socket.current.disconnect();
+      socket.current.disconnect();  
+      socket.current.emit("userOffline", user?._id);
+      socket.current.off("userOnline");
+      socket.current.off("userOffline");
       document.removeEventListener("click", handleClickOutside);
     };
-  }, [showEmojiList, showOptions]);
+  }, [showEmojiList, showOptions,isTyping,userDetails, user]);
+
+  useEffect(() => {
+    if (user) {
+      
+      socket.current.emit("addUser", user._id);
+      socket.current.on("getUsers", (users) => {
+        console.log("users", users);
+      });
+      
+      socket.current.emit("userOnline", user._id);
+      return () => {
+        socket.current.emit("userOffline", user._id);
+      };
+    }
+  }, [user]);
+
   useEffect(() => {
     if (arrivalMessage) {
       setMessages((prev) => [...prev, arrivalMessage]);
     }
   }, [arrivalMessage]);
 
-  useEffect(() => {
-    if (user) {
-      socket.current.emit("addUser", user._id);
-      socket.current.on("getUsers", (users) => {
-        console.log("users", users);
-      });
-    }
-  }, [user]);
 
   const createChat = async (senderId, receiverId) => {
     try {
@@ -135,7 +176,8 @@ const Chat = () => {
     }
 
     let message;
-    if ( fileInputRef?.current?.files?.length > 0) {
+
+    if (fileInputRef?.current?.files?.length > 0) {
       const formData = new FormData();
       formData.append("photo", fileInputRef.current.files[0]);
       formData.append("chatId", chatId);
@@ -165,13 +207,6 @@ const Chat = () => {
 
         socket.current.emit("sendMessage", message);
         setMessages((prevMessages) => [...prevMessages, message]);
-        setNewMessage("");
-        if (fileInputRef.current) {
-          fileInputRef.current.value = "";
-        }
-  
-       setShowOptions(false);
-
       } catch (error) {
         console.error("Error sending image:", error);
         return;
@@ -191,14 +226,12 @@ const Chat = () => {
 
       try {
         const res = await axios.post(addNewMessageURL, message);
-        setMessages((prevMessages) => [...prevMessages, res.data]);
+        setMessages([...messages, res.data]);
         setNewMessage("");
       } catch (error) {
         console.log(error);
       }
     }
-    setNewMessage("");
-
   };
 
   const handleKeyPress = (e) => {
@@ -216,7 +249,7 @@ const Chat = () => {
 
   const handleTyping = () => {
     if (userId) {
-      socket.current.emit("typing", { senderId: user._id, receiverId: userId });
+      socket.current.emit("typing", { senderId: user?._id, receiverId: userId });
     }
   };
 
@@ -225,38 +258,23 @@ const Chat = () => {
     setShowEmojiList(false);
   };
 
-  useEffect(() => {
-    const getUser = async () => {
-      const res = await axios
-        .get(`${getUserDetailsURL}/${userId}`, { headers })
-        .then((result) => {
-          console.log("chat user", result?.data?.response[0]?.user);
-          setUserDetails(result?.data?.response[0]?.user);
-        })
-        .catch((error) => {
-          console.log(error);
-        });
-    };
-    getUser();
-  }, [userId]);
-
-
-
   return (
     <div className="flex justify-center items-center w-full h-screen bg-gray-50">
       <div className="flex w-4/6 ">
         <div className="w-full bg-gray-200 p-4 rounded-md">
           <div className="bg-gray-200 rounded-md">
-            <div className="ml-4">
-              {console.log(userDetails)}
-              {userDetails && (
-                <div>
-                  <p className="font-semibold">{userDetails.username}</p>
-                  <p className="text-[10px] text-blue-500 ">
-                    {isTyping ? "typing..." : " "}
-                  </p>
-                </div>
-              )}
+            <div className="ml-4" >
+
+          {userDetails && (
+            <div>
+              <p className="font-semibold">{userDetails.username}</p>
+              <p className="text-[10px] text-blue-500 ">
+
+              {isTyping ? "typing..." : isOnline ? "Online" : "Offline"}
+              </p>
+
+            </div>
+          )}
             </div>
           </div>
           {/* {isTyping && <div className="text-gray-500"> typing...</div>} */}
@@ -318,10 +336,10 @@ const Chat = () => {
                   >
                     <CiImageOn size={25} />
                   </label>
+                  <input type="file" ref={fileInputRef} className="hidden" />
                 </div>
               </div>
             )}
-            <input type="file" ref={fileInputRef} className="hidden" />
 
             {showEmojiList && (
               <div className="absolute bottom-[6.3rem] right-[1rem] bg-gray-500 p-2 rounded-md w-30">
